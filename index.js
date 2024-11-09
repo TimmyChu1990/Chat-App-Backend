@@ -6,7 +6,10 @@ const messagesRoute = require("./routes/messagesRoute")
 
 const app = express();
 const socket = require("socket.io");
+
+const ChatGPT = require("./utils/chatgpt")
 require("dotenv").config();
+
 app.use(cors());
 app.use(express.json());
 
@@ -35,12 +38,16 @@ global.onlineUsers = new Map();
 io.on("connection", (socket) => {
     global.chatSocket = socket;
     socket.on("add-user", (userId) => {
-        onlineUsers.set(userId, socket.id)
+        onlineUsers.set(userId, socket.id);
     })
-    socket.on("send-msg", (data) => {
+    socket.on("send-msg", async(data) => {
         const sendUserSocket = onlineUsers.get(data.to);
         if(sendUserSocket) {
-            socket.to(sendUserSocket).emit("msg-receive", data.message);
+            if(data.to === process.env.CHATGPT_USERID){
+                socket.to(sendUserSocket).emit("gpt-msg-receive", data);
+            }else{
+                socket.to(sendUserSocket).emit("msg-receive", data.message);
+            }
         }
     });
 });
